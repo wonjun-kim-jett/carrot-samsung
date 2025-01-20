@@ -1,1 +1,64 @@
-test
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>SmartThings 로그인 및 가전제품 리스트</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <h1>SmartThings 로그인</h1>
+    <button id="loginButton">로그인</button>
+    <div id="deviceList"></div>
+
+    <script>
+        const CLIENT_ID = 'd6b28880-3998-443a-8018-3b684a2f93f7';
+        const CLIENT_SECRET = '0d1d6510-d52e-439c-993d-11b224fe0cf7';
+        const REDIRECT_URI = 'https://wonjun-kim-jett.github.io/carrot-samsung/callback.html';
+
+        $(document).ready(function() {
+            $('#loginButton').click(function() {
+                const authUrl = `https://api.smartthings.com/v1/oauth/authorize?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=code&scope=devices.read`;
+                window.location.href = authUrl;
+            });
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const code = urlParams.get('code');
+            
+            if (code) {
+                $.post('https://api.smartthings.com/v1/oauth/token', {
+                    grant_type: 'authorization_code',
+                    code: code,
+                    redirect_uri: REDIRECT_URI,
+                    client_id: CLIENT_ID,
+                    client_secret: CLIENT_SECRET
+                })
+                .done(function(response) {
+                    const accessToken = response.access_token;
+                    fetchDevices(accessToken);
+                })
+                .fail(function(error) {
+                    console.error('Error fetching access token:', error);
+                });
+            }
+        });
+
+        function fetchDevices(accessToken) {
+            $.ajax({
+                url: 'https://api.smartthings.com/v1/devices',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`
+                },
+                success: function(data) {
+                    const devices = data.items;
+                    devices.forEach(device => {
+                        $('#deviceList').append(`<p>${device.label} (${device.deviceTypeName})</p>`);
+                    });
+                },
+                error: function(error) {
+                    console.error('Error fetching devices:', error);
+                }
+            });
+        }
+    </script>
+</body>
+</html>
